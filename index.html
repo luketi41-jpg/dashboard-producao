@@ -1,1 +1,604 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · Produção de Camisas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f2f1ed;--surface:#fff;--surface2:#ebebE4;
+  --border:rgba(0,0,0,0.07);--border-med:rgba(0,0,0,0.11);--border-strong:rgba(0,0,0,0.16);
+  --text:#181816;--text-muted:#65655f;--text-hint:#a0a099;
+  --green:#3B6D11;--green-light:#EAF3DE;--green-mid:#639922;
+  --amber:#BA7517;--amber-light:#FAEEDA;
+  --blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;
+  --purple:#534AB7;--purple-light:#EEEDFE;
+  --teal:#0F6E56;--teal-light:#E1F5EE;
+  --radius:10px;--radius-lg:14px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+.header{background:var(--surface);border-bottom:1px solid var(--border-med);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:200}
+.hbrand{display:flex;align-items:center;gap:10px}
+.hicon{width:32px;height:32px;background:var(--text);border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:17px}
+.htitle{font-size:15px;font-weight:600}
+.hsub{font-size:11px;color:var(--text-muted)}
+.live{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--green);background:var(--green-light);padding:4px 11px;border-radius:20px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green-mid);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.wrap{max-width:1160px;margin:0 auto;padding:1.5rem 2rem 3rem}
 
+/* UPLOADS */
+.uploads-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.upload-card{background:var(--surface);border:1.5px dashed var(--border-strong);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;transition:border-color .2s}
+.upload-card.loaded{border-style:solid;border-color:var(--green-mid);background:var(--green-light)}
+.uc-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.uc-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--blue-light);color:var(--blue)}
+.uc-title{font-size:13px;font-weight:600}
+.uc-sub{font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5}
+.uc-status{display:none;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--green);margin-top:8px}
+.upload-card.loaded .uc-status{display:flex}
+input[type=file]{font-size:12px;color:var(--text-muted);width:100%;cursor:pointer}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.25rem}
+.topbar-date{font-size:12px;color:var(--text-muted)}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.day-sel{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:5px 10px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text)}
+.pills{display:flex;gap:5px}
+.pill{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:5px 14px;border:1px solid var(--border-med);border-radius:20px;cursor:pointer;background:var(--surface);color:var(--text-muted);transition:all .15s}
+.pill.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.125rem}
+.kpi-lbl{font-size:10px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:5px;margin-bottom:7px}
+.kpi-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;line-height:1;margin-bottom:5px}
+.kpi-d{font-size:11px;color:var(--text-hint)}
+.slbl{font-size:10px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.125rem 1.25rem}
+.row-chart{display:grid;grid-template-columns:200px 1fr;gap:10px;margin-bottom:1rem}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem}
+
+/* SETORES */
+.setores-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.setor-card{border-radius:10px;padding:.875rem 1rem;border:1px solid transparent}
+.setor-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.setor-total{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1;margin-bottom:2px}
+.setor-sub{font-size:10px;opacity:.7;margin-bottom:10px}
+.cb-row{display:grid;grid-template-columns:80px 1fr 36px;align-items:center;gap:6px;margin-bottom:5px}
+.cb-nome{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb-bg{border-radius:4px;height:6px;overflow:hidden;background:rgba(0,0,0,0.06)}
+.cb-fill{height:100%;border-radius:4px}
+.cb-val{font-family:'DM Mono',monospace;font-size:10px;text-align:right}
+
+/* COLABORADORES */
+.ch-head{display:grid;grid-template-columns:110px 1fr 42px 44px;gap:6px;font-size:10px;color:var(--text-hint);padding-bottom:5px;border-bottom:1px solid var(--border);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+.cl{display:flex;flex-direction:column;gap:7px}
+.cr{display:grid;grid-template-columns:110px 1fr 42px 44px;align-items:center;gap:6px}
+.cn{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-align:right}
+.rk{font-size:10px;font-weight:600;padding:2px 6px;border-radius:20px;text-align:center}
+
+/* QUALIDADE */
+.qi{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.qi-lbl{font-size:11px;color:var(--text-muted)}
+.qi-right{display:flex;align-items:center;gap:6px}
+.qi-inp{font-family:'DM Mono',monospace;font-size:12px;width:60px;padding:3px 7px;border:1px solid var(--border-med);border-radius:6px;background:var(--surface2);color:var(--text);text-align:right}
+.qi-inp:focus{outline:none;border-color:var(--blue-mid)}
+.qi-unit{font-size:10px;color:var(--text-hint)}
+.qi-total{display:flex;align-items:center;justify-content:space-between;padding:7px 8px;border-radius:8px;margin-top:8px;background:var(--green-light)}
+.qi-total-lbl{font-size:11px;font-weight:600}
+.qi-total-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:600}
+
+/* ES */
+.es-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem}
+.es-lbl{font-size:10px;font-weight:600;color:var(--text-hint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.es-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;margin-bottom:3px}
+.es-sub{font-size:11px;color:var(--text-muted)}
+.es-int{font-size:10px;color:var(--text-hint);font-style:italic;margin-top:3px}
+.es-ph{font-size:10px;color:var(--text-hint);font-style:italic;margin-top:4px}
+
+.ch-wrap{position:relative;height:130px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
+.os-wrap{overflow-x:auto;margin-top:.5rem}
+.os-table{width:100%;border-collapse:collapse;font-size:11px}
+.os-table th{font-size:10px;font-weight:600;color:var(--text-hint);text-transform:uppercase;padding:4px 8px;border-bottom:1px solid var(--border-med);text-align:left}
+.os-table td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-muted)}
+.os-table tr:hover td{background:var(--surface2)}
+.stag{font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px}
+.empty{text-align:center;padding:2rem;color:var(--text-hint);font-size:12px}
+.empty i{font-size:28px;display:block;margin-bottom:8px}
+.hidden{display:none}
+
+@media(max-width:780px){
+  .kpi-grid,.metrics,.row3,.setores-grid{grid-template-columns:1fr 1fr}
+  .row-chart,.uploads-row{grid-template-columns:1fr}
+  .wrap{padding:1rem 1rem 2rem}
+  .header{padding:0 1rem}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="hbrand">
+    <div class="hicon"><i class="ti ti-shirt"></i></div>
+    <div>
+      <div class="htitle">Dashboard de Produção</div>
+      <div class="hsub" id="hsub">Camisas Personalizadas</div>
+    </div>
+  </div>
+  <div class="live"><span class="live-dot"></span>Ao vivo</div>
+</header>
+
+<div class="wrap">
+
+  <div class="uploads-row">
+    <div class="upload-card" id="uc-xl">
+      <div class="uc-head">
+        <div class="uc-icon"><i class="ti ti-table"></i></div>
+        <div><div class="uc-title">Planilha de Produção</div></div>
+      </div>
+      <div class="uc-sub">Arquivo <strong>.xls ou .xlsx</strong> com abas numeradas 1, 2, 3…</div>
+      <input type="file" accept=".xls,.xlsx" onchange="loadXL(this.files[0])">
+      <div class="uc-status" id="st-xl"><i class="ti ti-circle-check"></i><span id="fn-xl"></span></div>
+    </div>
+    <div class="upload-card" id="uc-csv">
+      <div class="uc-head">
+        <div class="uc-icon" style="background:var(--purple-light);color:var(--purple)"><i class="ti ti-file-text"></i></div>
+        <div><div class="uc-title">Entrada / Saída (CSV)</div></div>
+      </div>
+      <div class="uc-sub">Arquivo <strong>.csv</strong> com colunas <em>Data, Tipo, Qtde, Internacional</em>.</div>
+      <input type="file" accept=".csv" onchange="loadCSV(this.files[0])">
+      <div class="uc-status" id="st-csv"><i class="ti ti-circle-check"></i><span id="fn-csv"></span></div>
+    </div>
+  </div>
+
+  <div id="dash" class="hidden">
+
+    <div class="topbar">
+      <span class="topbar-date" id="tlbl"></span>
+      <div class="topbar-right">
+        <label style="font-size:12px;color:var(--text-muted)">Dia:</label>
+        <select class="day-sel" id="dsel" onchange="renderDay(+this.value)"></select>
+        <div class="pills">
+          <button class="pill on" onclick="setView('dia',this)">Dia</button>
+          <button class="pill"    onclick="setView('mes',this)">Mês</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-lbl"><i class="ti ti-file-text"></i> OS no período</div><div class="kpi-val" id="k-os">—</div><div class="kpi-d" id="k-os-d"></div></div>
+      <div class="kpi"><div class="kpi-lbl"><i class="ti ti-shirt"></i> Peças produzidas</div><div class="kpi-val" id="k-pcs">—</div><div class="kpi-d" id="k-pcs-d"></div></div>
+      <div class="kpi"><div class="kpi-lbl"><i class="ti ti-users"></i> Colaboradores</div><div class="kpi-val" id="k-col">—</div><div class="kpi-d">com produção</div></div>
+      <div class="kpi"><div class="kpi-lbl"><i class="ti ti-trending-up"></i> Média / pessoa</div><div class="kpi-val" id="k-med">—</div><div class="kpi-d">peças por colaborador</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="slbl">Fluxo produtivo por setor</div>
+      <div class="setores-grid" id="setores-grid"></div>
+    </div>
+
+    <div class="row-chart">
+      <div class="card">
+        <div class="slbl">Qualidade</div>
+        <div class="qi"><span class="qi-lbl">Retrabalhos</span><div class="qi-right"><input class="qi-inp" id="q-ret" type="number" min="0" value="0" oninput="calcQual()"><span class="qi-unit">pç</span></div></div>
+        <div class="qi"><span class="qi-lbl">Peças com defeito</span><div class="qi-right"><input class="qi-inp" id="q-def" type="number" min="0" value="0" oninput="calcQual()"><span class="qi-unit">pç</span></div></div>
+        <div class="qi" style="border:none"><span class="qi-lbl">Erro personalização</span><div class="qi-right"><input class="qi-inp" id="q-err" type="number" min="0" value="0" oninput="calcQual()"><span class="qi-unit">pç</span></div></div>
+        <div class="qi-total" id="qi-total">
+          <span class="qi-total-lbl" id="qi-lbl" style="color:var(--green)">Índice conformidade</span>
+          <span class="qi-total-val" id="qi-pct" style="color:var(--green)">—</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="slbl" id="chart-lbl">Peças por colaborador</div>
+        <div class="ch-wrap"><canvas id="mc"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="slbl">Desempenho por colaborador</div>
+      <div class="ch-head"><span>Colaborador</span><span>Peças</span><span style="text-align:right">OS</span><span style="text-align:right">Rank</span></div>
+      <div class="cl" id="colabs-list"></div>
+    </div>
+
+    <div class="row3">
+      <div class="es-card">
+        <div class="es-lbl"><i class="ti ti-login" style="font-size:11px;margin-right:3px"></i>Entrada</div>
+        <div class="es-val" id="e-ent">—</div>
+        <div class="es-sub" id="e-ent-s"></div>
+        <div class="es-int" id="e-ent-int" style="display:none"></div>
+        <div class="es-ph" id="e-ent-ph">Carregue o CSV</div>
+      </div>
+      <div class="es-card">
+        <div class="es-lbl"><i class="ti ti-logout" style="font-size:11px;margin-right:3px"></i>Saída</div>
+        <div class="es-val" id="e-sai">—</div>
+        <div class="es-sub" id="e-sai-s"></div>
+        <div class="es-int" id="e-sai-int" style="display:none"></div>
+        <div class="es-ph" id="e-sai-ph">Carregue o CSV</div>
+      </div>
+      <div class="es-card">
+        <div class="es-lbl"><i class="ti ti-layers-difference" style="font-size:11px;margin-right:3px"></i>Saldo</div>
+        <div class="es-val" id="e-sal">—</div>
+        <div class="es-sub" id="e-sal-s"></div>
+        <div class="es-int" id="e-sal-int" style="display:none"></div>
+        <div class="es-ph" id="e-sal-ph">Carregue o CSV</div>
+      </div>
+    </div>
+
+    <div class="metrics" style="margin-top:1rem">
+      <div class="es-card"><div class="es-lbl">Total mês</div><div class="es-val" id="m-mes">—</div><div class="es-sub">peças acumuladas</div></div>
+      <div class="es-card"><div class="es-lbl">Melhor dia</div><div class="es-val" id="m-best">—</div><div class="es-sub" id="m-best-d"></div></div>
+      <div class="es-card"><div class="es-lbl">Top colaborador</div><div class="es-val" id="m-top" style="font-size:13px;padding-top:4px">—</div><div class="es-sub" id="m-top-d"></div></div>
+      <div class="es-card"><div class="es-lbl">Dias ativos</div><div class="es-val" id="m-dias">—</div><div class="es-sub">com produção</div></div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <div class="slbl" id="os-lbl">Ordens de serviço</div>
+      <div id="os-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── SETORES ──────────────────────────────────────────────────────────────────
+const SETORES = [
+  { id:'arte',   label:'Arte',             nomes:['pedro h','pedro henrique','everton','akira'],   cor:'#378ADD', corLight:'#E6F1FB' },
+  { id:'desp',   label:'Despenação',       nomes:['camila','kayllane'],                            cor:'#BA7517', corLight:'#FAEEDA' },
+  { id:'pre',    label:'Conf. pré-prensa', nomes:['joão pedro','joao pedro','pedrinho'],           cor:'#534AB7', corLight:'#EEEDFE' },
+  { id:'prensa', label:'Prensa',           nomes:['paulo','diogo','gustavo','pedro g','lucas'],    cor:'#0F6E56', corLight:'#E1F5EE' },
+];
+function getSetor(nome) {
+  const n = nome.toLowerCase();
+  for (const s of SETORES) if (s.nomes.some(sn => n.includes(sn))) return s;
+  return SETORES[SETORES.length-1];
+}
+
+// ── ESTADO ───────────────────────────────────────────────────────────────────
+let dadosMes={}, colabs=[], dadosCSV=[], view='dia', chartInst=null, _tq=0;
+
+// ── LOAD EXCEL ───────────────────────────────────────────────────────────────
+function loadXL(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, { type:'binary' });
+      processXL(wb, file.name);
+    } catch(e) { alert('Erro ao ler planilha:\n' + e.message); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function processXL(wb, fname) {
+  dadosMes={}; colabs=[];
+
+  // Filtra apenas abas numéricas: "1","2","21" etc. Ignora "CONTROLE"
+  const diasAbas = wb.SheetNames.filter(n => /^\d+$/.test(n.trim()));
+  if (!diasAbas.length) {
+    alert('Abas numéricas não encontradas.\nAbas no arquivo: ' + wb.SheetNames.join(', '));
+    return;
+  }
+
+  // Estrutura (conforme planilha MAIO 2026):
+  // Linha 0 (idx 0): título/merge (ignorar)
+  // Linha 1 (idx 1): "PEÇAS" + quantidades por coluna
+  // Linha 2 (idx 2): nomes dos colaboradores
+  // Linha 3+ (idx 3+): números de OS
+
+  for (const ds of diasAbas) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[ds], { header:1, defval:null });
+    if (!rows || rows.length < 3) continue;
+
+    const pecasRow = rows[1] || [];
+    const nomesRow = rows[2] || [];
+
+    // Extrair colaboradores na primeira aba com dados
+    if (colabs.length === 0) {
+      for (let c = 0; c < nomesRow.length; c++) {
+        const n = nomesRow[c];
+        if (!n || !String(n).trim()) continue;
+        const nome = String(n).trim();
+        // Ignorar rótulos genéricos
+        if (/^(pe[çc]as?|total|os|controle|setor|data|dia)$/i.test(nome)) continue;
+        if (/^\d+$/.test(nome)) continue;
+        colabs.push({ nome, col:c, setor:getSetor(nome) });
+      }
+    }
+
+    if (!colabs.length) continue;
+
+    const pecas = colabs.map(co => {
+      const v = pecasRow[co.col];
+      return (v !== null && v !== '' && !isNaN(Number(v))) ? Number(v) : 0;
+    });
+
+    const os = {};
+    colabs.forEach(co => { os[co.nome] = []; });
+    for (let ri = 3; ri < rows.length; ri++) {
+      const row = rows[ri] || [];
+      colabs.forEach(co => {
+        const val = row[co.col];
+        if (val !== null && val !== undefined && String(val).trim())
+          os[co.nome].push(String(val).trim());
+      });
+    }
+
+    dadosMes[parseInt(ds)] = { pecas, os };
+  }
+
+  if (!Object.keys(dadosMes).length) {
+    alert('Dados não encontrados. Verifique se as abas têm dados nas linhas 2 e 3.');
+    return;
+  }
+
+  const sel = document.getElementById('dsel');
+  sel.innerHTML = '';
+  const diasNum = Object.keys(dadosMes).map(Number).sort((a,b)=>a-b);
+  diasNum.forEach(d => { const o=document.createElement('option'); o.value=d; o.textContent='Dia '+d; sel.appendChild(o); });
+
+  calcMes();
+  const primeiro = diasNum.find(d => dadosMes[d].pecas.some(p=>p>0)) || diasNum[0];
+  sel.value = primeiro;
+  renderDay(primeiro);
+
+  document.getElementById('tlbl').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  markLoaded('xl', fname.replace(/\.xls[x]?$/i,''));
+  document.getElementById('hsub').textContent = fname.replace(/\.xls[x]?$/i,'');
+  document.getElementById('dash').classList.remove('hidden');
+}
+
+// ── LOAD CSV ─────────────────────────────────────────────────────────────────
+function loadCSV(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    dadosCSV = [];
+    const lines = e.target.result.split('\n');
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t || /^data/i.test(t)) continue;
+      const p = t.split(',');
+      if (p.length < 3) continue;
+      const data=p[0].trim(), tipo=p[1].trim(), qtde=parseInt(p[2]), intl=parseInt(p[3])||0;
+      if (data && tipo && !isNaN(qtde)) dadosCSV.push({data,tipo,qtde,intl});
+    }
+    markLoaded('csv', file.name);
+    refreshES();
+  };
+  r.readAsText(file,'utf-8');
+}
+
+function refreshES() {
+  const has = dadosCSV.length > 0;
+  ['ent','sai','sal'].forEach(k => { document.getElementById('e-'+k+'-ph').style.display = has?'none':''; });
+  if (!has) return;
+  view==='dia' ? updateES(parseInt(document.getElementById('dsel').value)) : updateESMes();
+}
+
+function filtrarCSV(dia) {
+  const ds = String(dia).padStart(2,'0');
+  return dadosCSV.filter(r => r.data.includes('/'+ds+'/') || r.data.endsWith('-'+ds) || r.data===String(dia));
+}
+
+function calcES(linhas) {
+  let ent=0,sai=0,eI=0,sI=0;
+  linhas.forEach(r => {
+    if (/entr/i.test(r.tipo)) { ent+=r.qtde; eI+=r.intl; }
+    else if (/sa[íi]da|expedi|entrega/i.test(r.tipo)) { sai+=r.qtde; sI+=r.intl; }
+  });
+  return {ent,sai,saldo:ent-sai,eI,sI,salI:eI-sI};
+}
+
+function setESUI(d, per) {
+  document.getElementById('e-ent').textContent = d.ent.toLocaleString('pt-BR');
+  document.getElementById('e-sai').textContent = d.sai.toLocaleString('pt-BR');
+  document.getElementById('e-sal').textContent = d.saldo.toLocaleString('pt-BR');
+  document.getElementById('e-sal').style.color = d.saldo>0?'var(--amber)':'var(--green)';
+  ['ent','sai','sal'].forEach(k => document.getElementById('e-'+k+'-s').textContent='peças — '+per);
+  const hi = d.eI>0||d.sI>0;
+  ['ent','sai','sal'].forEach(k => document.getElementById('e-'+k+'-int').style.display=hi?'':'none');
+  if (hi) {
+    document.getElementById('e-ent-int').textContent='↳ '+d.eI+' internacionais';
+    document.getElementById('e-sai-int').textContent='↳ '+d.sI+' internacionais';
+    document.getElementById('e-sal-int').textContent='↳ saldo intl: '+d.salI;
+  }
+}
+function updateES(dia)  { setESUI(calcES(filtrarCSV(dia)),'dia '+dia); }
+function updateESMes()  { setESUI(calcES(dadosCSV),'mês'); }
+
+// ── MARK LOADED ───────────────────────────────────────────────────────────────
+function markLoaded(t, nome) {
+  document.getElementById('uc-'+t).classList.add('loaded');
+  document.getElementById('fn-'+t).textContent = nome;
+}
+
+// ── CALC MÊS ─────────────────────────────────────────────────────────────────
+function calcMes() {
+  let total=0,best=0,bestDia=0,dias=0;
+  const totC=colabs.map(()=>0);
+  Object.entries(dadosMes).forEach(([d,data])=>{
+    const t=data.pecas.reduce((a,b)=>a+b,0);
+    total+=t; if(t>best){best=t;bestDia=+d;} if(t>0) dias++;
+    data.pecas.forEach((p,i)=>{totC[i]+=p;});
+  });
+  const topI=totC.indexOf(Math.max(...totC));
+  document.getElementById('m-mes').textContent   =total.toLocaleString('pt-BR');
+  document.getElementById('m-best').textContent  =best;
+  document.getElementById('m-best-d').textContent='dia '+bestDia;
+  document.getElementById('m-top').textContent   =colabs[topI]?.nome||'—';
+  document.getElementById('m-top-d').textContent =(totC[topI]||0)+' peças';
+  document.getElementById('m-dias').textContent  =dias;
+}
+
+// ── VIEWS ─────────────────────────────────────────────────────────────────────
+function setView(v,btn) {
+  view=v;
+  document.querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const sel=document.getElementById('dsel');
+  sel.disabled=v==='mes'; sel.style.opacity=v==='mes'?'.4':'1';
+  v==='dia'?renderDay(+sel.value):renderMes();
+}
+
+// ── RENDER DIA ────────────────────────────────────────────────────────────────
+function renderDay(dia) {
+  const d=dadosMes[dia]; if(!d) return;
+  const total=d.pecas.reduce((a,b)=>a+b,0);
+  const ativos=d.pecas.filter(p=>p>0).length;
+  const media=ativos>0?Math.round(total/ativos):0;
+  let tos=0; colabs.forEach(co=>{tos+=(d.os[co.nome]||[]).length;});
+
+  document.getElementById('k-os').textContent  =tos;
+  document.getElementById('k-os-d').textContent='ordens — dia '+dia;
+  document.getElementById('k-pcs').textContent =total;
+  document.getElementById('k-pcs-d').textContent='peças — dia '+dia;
+  document.getElementById('k-col').textContent =ativos;
+  document.getElementById('k-med').textContent =media;
+
+  renderSetores(d.pecas);
+  renderColabs(d.pecas,d.os,total,false);
+  calcQual(total);
+  drawChart(
+    colabs.filter((_,i)=>d.pecas[i]>0).map(c=>c.nome.split(' ')[0]),
+    d.pecas.filter(p=>p>0),
+    'Peças por colaborador — Dia '+dia
+  );
+  renderOS(d,dia);
+  if(dadosCSV.length) updateES(dia);
+}
+
+// ── RENDER MÊS ────────────────────────────────────────────────────────────────
+function renderMes() {
+  const totC=colabs.map(()=>0), totOS={};
+  colabs.forEach(co=>{totOS[co.nome]=0;});
+  let total=0, tos=0;
+  Object.entries(dadosMes).forEach(([,d])=>{
+    d.pecas.forEach((p,i)=>{totC[i]+=p;total+=p;});
+    colabs.forEach(co=>{const c=(d.os[co.nome]||[]).length;totOS[co.nome]+=c;tos+=c;});
+  });
+  const ativos=totC.filter(p=>p>0).length, media=ativos>0?Math.round(total/ativos):0;
+
+  document.getElementById('k-os').textContent  =tos;
+  document.getElementById('k-os-d').textContent='OS no mês';
+  document.getElementById('k-pcs').textContent =total.toLocaleString('pt-BR');
+  document.getElementById('k-pcs-d').textContent='total do mês';
+  document.getElementById('k-col').textContent =ativos;
+  document.getElementById('k-med').textContent =media;
+
+  renderSetores(totC);
+  renderColabs(totC,totOS,total,true);
+  calcQual(total);
+  const dn=Object.keys(dadosMes).map(Number).sort((a,b)=>a-b);
+  drawChart(dn.map(d=>'Dia '+d),dn.map(d=>dadosMes[d].pecas.reduce((a,b)=>a+b,0)),'Peças por dia no mês');
+  document.getElementById('os-lbl').textContent='Ordens de serviço — mês';
+  document.getElementById('os-body').innerHTML='<div class="empty"><i class="ti ti-calendar"></i>Selecione um dia para ver as OS</div>';
+  if(dadosCSV.length) updateESMes();
+}
+
+// ── SETORES ───────────────────────────────────────────────────────────────────
+function renderSetores(pecas) {
+  const totS={},colS={}; SETORES.forEach(s=>{totS[s.id]=0;colS[s.id]=[];});
+  colabs.forEach((co,i)=>{totS[co.setor.id]+=pecas[i]||0;if((pecas[i]||0)>0)colS[co.setor.id].push({nome:co.nome,val:pecas[i]||0});});
+  document.getElementById('setores-grid').innerHTML=SETORES.map(s=>{
+    const tot=totS[s.id],cols=colS[s.id].sort((a,b)=>b.val-a.val),maxC=cols.length?cols[0].val:1;
+    return `<div class="setor-card" style="background:${s.corLight};border-color:${s.cor}33">
+      <div class="setor-title" style="color:${s.cor}"><i class="ti ti-circle-filled" style="font-size:8px"></i>${s.label}</div>
+      <div class="setor-total" style="color:${s.cor}">${tot.toLocaleString('pt-BR')}</div>
+      <div class="setor-sub" style="color:${s.cor}">peças</div>
+      ${cols.map(c=>`<div class="cb-row">
+        <span class="cb-nome" style="color:${s.cor}">${c.nome.split(' ')[0]}</span>
+        <div class="cb-bg"><div class="cb-fill" style="width:${Math.round((c.val/maxC)*100)}%;background:${s.cor}"></div></div>
+        <span class="cb-val" style="color:${s.cor}">${c.val}</span>
+      </div>`).join('')||'<span style="font-size:10px;opacity:.5">Sem produção</span>'}
+    </div>`;
+  }).join('');
+}
+
+// ── COLABORADORES ─────────────────────────────────────────────────────────────
+function renderColabs(pecas,osData,total,mesMode) {
+  const lista=colabs.map((co,i)=>({
+    nome:co.nome,setor:co.setor,pecas:pecas[i]||0,
+    os:mesMode?(osData[co.nome]||0):(osData[co.nome]||[]).length
+  })).filter(c=>c.pecas>0).sort((a,b)=>b.pecas-a.pecas);
+  const maxP=lista.length?lista[0].pecas:1;
+  document.getElementById('colabs-list').innerHTML=lista.length
+    ?lista.map((c,idx)=>{
+        const pct=Math.round((c.pecas/maxP)*100);
+        const rBg=idx===0?'#FAEEDA':idx===1?'#f0efe9':'#f4f3ef';
+        const rFg=idx===0?'#BA7517':idx===1?'#65655f':'#9e9e97';
+        return `<div class="cr">
+          <span class="cn" style="color:${c.setor.cor}" title="${c.nome}">${c.nome}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="cb-bg" style="flex:1;height:6px;border-radius:4px"><div class="cb-fill" style="width:${pct}%;background:${c.setor.cor}"></div></div>
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);min-width:30px;text-align:right">${c.pecas}</span>
+          </div>
+          <span class="tv">${c.os}</span>
+          <span class="rk" style="background:${rBg};color:${rFg}">${idx+1}º</span>
+        </div>`;
+    }).join('')
+    :'<div class="empty"><i class="ti ti-zzz"></i>Sem produção neste dia</div>';
+}
+
+// ── QUALIDADE ─────────────────────────────────────────────────────────────────
+function calcQual(total) {
+  if(total!==undefined) _tq=total;
+  const nc=(parseInt(document.getElementById('q-ret').value)||0)
+          +(parseInt(document.getElementById('q-def').value)||0)
+          +(parseInt(document.getElementById('q-err').value)||0);
+  const pct=_tq>0?(((_tq-nc)/_tq)*100).toFixed(1):'—';
+  const ok=_tq>0&&parseFloat(pct)>=95;
+  const cor=ok?'var(--green)':'var(--amber)';
+  const bg=ok?'var(--green-light)':'var(--amber-light)';
+  document.getElementById('qi-pct').textContent=_tq>0?pct+'%':'—';
+  document.getElementById('qi-pct').style.color=cor;
+  document.getElementById('qi-lbl').style.color=cor;
+  document.getElementById('qi-total').style.background=bg;
+}
+
+// ── GRÁFICO ───────────────────────────────────────────────────────────────────
+function drawChart(labels,data,titulo) {
+  document.getElementById('chart-lbl').textContent=titulo;
+  if(chartInst) chartInst.destroy();
+  chartInst=new Chart(document.getElementById('mc'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Peças',data,backgroundColor:'rgba(55,138,221,0.18)',borderColor:'#378ADD',borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>`${v.raw} peças`}}},
+      scales:{
+        x:{ticks:{font:{size:10,family:'DM Mono'},autoSkip:true,maxRotation:30},grid:{display:false}},
+        y:{ticks:{font:{size:10,family:'DM Mono'}},grid:{color:'rgba(128,128,128,0.08)'},beginAtZero:true}
+      }
+    }
+  });
+}
+
+// ── OS DO DIA ─────────────────────────────────────────────────────────────────
+function renderOS(d,dia) {
+  document.getElementById('os-lbl').textContent='Ordens de serviço — Dia '+dia;
+  const rows=colabs.map(co=>({nome:co.nome,setor:co.setor,total:(d.os[co.nome]||[]).length}))
+    .filter(r=>r.total>0).sort((a,b)=>b.total-a.total);
+  document.getElementById('os-body').innerHTML=rows.length
+    ?`<div class="os-wrap"><table class="os-table">
+        <thead><tr><th>Colaborador</th><th>Setor</th><th>Total OS</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr>
+          <td style="color:${r.setor.cor};font-weight:500">${r.nome}</td>
+          <td><span class="stag" style="background:${r.setor.corLight};color:${r.setor.cor}">${r.setor.label}</span></td>
+          <td style="font-family:'DM Mono',monospace">${r.total}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`
+    :'<div class="empty"><i class="ti ti-file-off"></i>Nenhuma OS neste dia</div>';
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('tlbl').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+</script>
+</body>
+</html>
